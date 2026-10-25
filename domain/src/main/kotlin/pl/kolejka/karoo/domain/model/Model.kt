@@ -82,6 +82,17 @@ data class Settings(
     val notifications: Boolean = true,
     /** Grupy stacji docelowych (SPEC 6.1); null = domyślne z rozkładu (`meta.default_targets`). */
     val targets: List<Set<Int>>? = null,
+    // Tryb awaryjny „z pozycji" (SPEC 6.10): najbliższy pociąg do celu ze stacji w okolicy.
+    /** Promień szukania stacji wokół bieżącej pozycji. */
+    val nearbyRadiusM: Double = 20_000.0,
+    /** Prędkość dojazdu na stację rowerem w trybie awaryjnym (ostrożnie, coś nie gra). */
+    val emergencyRideKmh: Double = 15.0,
+    /** Prędkość pieszo z rowerem (guma, łańcuch). */
+    val walkKmh: Double = 5.0,
+    /** Mnożnik odległości w linii prostej → po drogach. */
+    val roadFactor: Double = 1.3,
+    /** Czy proponować autobusy zastępcze (z rowerem zwykle się nie da). */
+    val allowBus: Boolean = false,
 ) {
     companion object {
         /** „36103|37440|33571,14357927" ↔ [[36103],[37440],[33571,14357927]]. */

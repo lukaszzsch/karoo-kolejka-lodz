@@ -2,7 +2,7 @@
 <ExtensionInfo
     displayName="@string/extension_name"
     icon="@drawable/ic_train"
-    id="pociag"
+    id="pociag_lodz"
     scansDevices="false">
     <DataType
         description="@string/tile_description"

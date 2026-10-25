@@ -12,12 +12,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import pl.kolejka.karoo.BuildConfig
 import pl.kolejka.karoo.domain.text.TileModel
 import pl.kolejka.karoo.glance.TileRenderer
 import pl.kolejka.karoo.log.FileLog
 
 /**
- * Kafelek „Pociąg do Warszawy" (SPEC 7). Zawsze emituje własny widok, nigdy pusty (P2);
+ * Kafelek „Pociąg do Łodzi" (SPEC 7; tryb awaryjny 6.10). Zawsze emituje własny widok, nigdy pusty (P2);
  * w podglądzie edytora statyczny i nieklikalny (P3).
  */
 class TrainDataType(extension: String, private val engine: () -> TileEngine) : DataTypeImpl(extension, TYPE_ID) {
@@ -31,7 +32,12 @@ class TrainDataType(extension: String, private val engine: () -> TileEngine) : D
         emitter.onNext(UpdateGraphicConfig(showHeader = false))
         scope.launch {
             if (config.preview) {
-                emitter.updateView(renderer.render(TileModel(PreviewData.state, PreviewData.upcoming, PreviewData.names, PreviewData.finishEta, PreviewData.REMAINING_M), config))
+                val preview = if (BuildConfig.NEARBY_MODE) {
+                    TileModel(PreviewData.nearby)
+                } else {
+                    TileModel(PreviewData.state, PreviewData.upcoming, PreviewData.names, PreviewData.finishEta, PreviewData.REMAINING_M)
+                }
+                emitter.updateView(renderer.render(preview, config))
                 return@launch
             }
             var lastAt = 0L

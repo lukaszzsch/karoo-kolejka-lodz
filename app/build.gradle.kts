@@ -10,13 +10,16 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "pl.kolejka.karoo"
+        // Osobna aplikacja obok „Pociąg do Warszawy": inny applicationId i ID rozszerzenia.
+        applicationId = "pl.kolejka.karoo.lodz"
         minSdk = 23
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0-lodz"
         // Rozkład publikowany przez .github/workflows/timetable.yml na GitHub Pages (SPEC 1.2).
-        buildConfigField("String", "MANIFEST_URL", "\"https://jach00lczyk.github.io/karoo-kolejka/manifest.json\"")
+        buildConfigField("String", "MANIFEST_URL", "\"https://jach00lczyk.github.io/karoo-kolejka-lodz/manifest.json\"")
+        // Tryb awaryjny (SPEC 6.10): kafelek liczy z bieżącej pozycji, trasa jest ignorowana.
+        buildConfigField("boolean", "NEARBY_MODE", "true")
     }
 
     buildTypes {

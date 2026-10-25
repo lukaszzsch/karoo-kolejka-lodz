@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Wariant łódzki — tryb awaryjny „z pozycji" (2026-10-25)
+
+- Osobna aplikacja „Pociąg do Łodzi" (`pl.kolejka.karoo.lodz`, rozszerzenie `pociag_lodz`,
+  wersja 0.3.0-lodz): może stać na Karoo obok wersji warszawskiej. Rozkład z
+  `https://jach00lczyk.github.io/karoo-kolejka-lodz/manifest.json`.
+- Pipeline: `--region lodz|warszawa` (domyślnie `lodz`). Łódź: ŁKA + PolRegio (bez PKP
+  Intercity — rower tylko z rezerwacją), cel Łódź Kaliska, bez WKD; tylko kursy z wysiadaniem
+  na Kaliskiej, przycięte po niej. Nazwy przewoźników dopasowywane bez wielkości liter.
+  Region warszawski bez zmian (dotychczasowe testy przechodzą z `--region warszawa`).
+- Domena: `NearbyPlanner` (SPEC 6.10) — stacje w 20 km od pozycji, warianty 🚲 15 km/h
+  i 🚶 5 km/h, najwcześniejszy przyjazd do celu, histereza 5 min, flagi OSTATNI / jutro,
+  bez autobusów ZKA. Nowe stany `Nearby`, `NoPosition`, `NoStationNearby`; widoki w
+  `TileText`. 9 testów.
+- `NameShortener`: „Łódź" jak „Warszawa" (Ł. Kaliska, Kali.); granice słów przez
+  `(?<!\p{L})`/`(?!\p{L})` zamiast `\b` — od JDK 19 `\b` nie traktuje „Ś"/„Ł" jako liter.
+- `KarooSource.location` (`OnLocationChanged`, karoo-ext ≥ 1.1.3); `TileEngine` w trybie
+  awaryjnym przelicza przy zmianie komórki ~300 m lub minuty (SPEC 7.3, 11.2). Trasa jest
+  ignorowana.
+
 ### Faza 6 — Ekrany aplikacji (2026-10-25, bez powiadomienia i aktualizacji APK)
 
 - Zakładki (SPEC 8): **Meta** (stacja, odległość od mety, 🚲 ETA z Karoo / ≈, gotowość na

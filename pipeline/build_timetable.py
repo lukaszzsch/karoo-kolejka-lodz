@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Buduje mały plik SQLite z rozkładem KM + SKM Warszawa + WKD dla rozszerzenia Karoo.
+"""Buduje mały plik SQLite z rozkładem dla rozszerzenia Karoo (region `--region`).
 
-Wejście: GTFS `polish_trains.zip` i `wkd.zip` (mkuran.pl). Wyjście w katalogu `--out`:
+Regiony (`REGIONS`): `lodz` — ŁKA + PolRegio do Łodzi Kaliskiej (domyślny), `warszawa` —
+KM + SKM Warszawa + WKD. Wejście: GTFS `polish_trains.zip` i (dla Warszawy) `wkd.zip` (mkuran.pl). Wyjście w katalogu `--out`:
 `manifest.json` oraz `timetable-<version>.sqlite.gz`. Szczegóły: SPEC.md, sekcja 3.
 
 Schemat SQLite (schema_version = 1) — jak w SPEC 3.4, z odstępstwami:
@@ -51,8 +52,46 @@ TZ = ZoneInfo("Europe/Warsaw")
 PT_URL = "https://mkuran.pl/gtfs/polish_trains.zip"
 WKD_URL = "https://mkuran.pl/gtfs/wkd.zip"
 
-# Przewoźnicy z polish_trains wyszukiwani po nazwie (SPEC 3.2.1) → kod w bazie.
-PT_AGENCIES = {"Koleje Mazowieckie": "KM", "SKM Warszawa": "SKM"}
+
+
+@dataclass(frozen=True)
+class Region:
+    """Konfiguracja regionu: przewoźnicy, cele i dodatkowe feedy.
+
+    `agencies`: nazwa przewoźnika w agency.txt polish_trains → kod w bazie (dopasowanie bez
+    wielkości liter). `only_via_targets`: zostają tylko kursy z wysiadaniem na stacji celu,
+    przycięte po ostatnim takim przystanku — konieczne, gdy przewoźnik jeździ po całym kraju
+    (PolRegio), bo inaczej baza przekroczy MAX_DB_BYTES.
+    """
+    agencies: dict
+    targets: list
+    with_wkd: bool
+    only_via_targets: bool
+    attribution: tuple = ()
+
+
+REGIONS = {
+    "warszawa": Region(
+        agencies={"Koleje Mazowieckie": "KM", "SKM Warszawa": "SKM"},
+        targets=[
+            ["Warszawa Gdańska"],
+            ["Warszawa Wileńska"],
+            ["Warszawa Śródmieście", "Warszawa Śródmieście WKD"],
+        ],
+        with_wkd=True,
+        only_via_targets=False,
+        attribution=("Data: Warszawska Kolej Dojazdowa (CC0), GTFS: Mikołaj Kuranowski (https://mkuran.pl/gtfs/)",),
+    ),
+    # Awaryjny powrót do Łodzi: bez PKP Intercity (rower tylko z rezerwacją).
+    "lodz": Region(
+        agencies={"Łódzka Kolej Aglomeracyjna": "ŁKA", "PolRegio": "PR"},
+        targets=[["Łódź Kaliska"]],
+        with_wkd=False,
+        only_via_targets=True,
+        attribution=("GTFS: Mikołaj Kuranowski (https://mkuran.pl/gtfs/)",),
+    ),
+}
+DEFAULT_REGION = "lodz"
 
 WINDOW_BEFORE_DAYS = 1
 WINDOW_AFTER_DAYS = 14
@@ -63,12 +102,6 @@ WKD_ID_BASE = 10_000_000
 FALLBACK_ID_BASE = 20_000_000
 # Dane opublikowane nie dawniej niż tyle dni temu i niezmienione źródła → bez publikacji.
 REBUILD_WHEN_VALID_AHEAD_BELOW_DAYS = 12
-
-DEFAULT_TARGETS = [
-    ["Warszawa Gdańska"],
-    ["Warszawa Wileńska"],
-    ["Warszawa Śródmieście", "Warszawa Śródmieście WKD"],
-]
 
 FLAG_NO_PICKUP = 1
 FLAG_NO_DROP_OFF = 2
@@ -269,14 +302,26 @@ def fill_missing_times(times: list[list]) -> None:
         raise BuildError("Kurs bez czasu na pierwszym lub ostatnim przystanku")
 
 
-def load_feed(path: Path, prefix: str, window: tuple[dt.date, dt.date]) -> Feed:
+def trim_to_targets(times: list[list], target_keys: set[str]) -> list[list] | None:
+    """Przycina kurs po ostatnim przystanku-celu z wysiadaniem; None, gdy kurs nie dowozi do celu.
+
+    Cel na pierwszym przystanku się nie liczy (nie ma skąd do niego dojechać).
+    """
+    last = None
+    for i, t in enumerate(times):
+        if i > 0 and t[1] in target_keys and not t[6] & FLAG_NO_DROP_OFF:
+            last = i
+    return times[: last + 1] if last is not None else None
+
+
+def load_feed(path: Path, prefix: str, window: tuple[dt.date, dt.date], region: Region) -> Feed:
     log.info("Wczytywanie %s (%s)", path, prefix)
     with zipfile.ZipFile(path) as zf:
         agencies = list(read_csv(zf, "agency.txt"))
         if prefix == "pt":
             agency_map: dict[str, str] = {}
-            for name, code in PT_AGENCIES.items():
-                ids = [a.get("agency_id", "") for a in agencies if a["agency_name"] == name]
+            for name, code in region.agencies.items():
+                ids = [a.get("agency_id", "") for a in agencies if a["agency_name"].casefold() == name.casefold()]
                 if not ids:
                     raise BuildError(f"Brak przewoźnika „{name}\" w agency.txt")
                 for aid in ids:
@@ -334,10 +379,23 @@ def load_feed(path: Path, prefix: str, window: tuple[dt.date, dt.date]) -> Feed:
                 platform or None, track or None, flags,
             ])
 
+        target_names = {n for group in region.targets for n in group}
+        target_keys = {
+            s.station_key for s in stops.values()
+            if stop_rows[s.station_key.split(":", 1)[1]]["stop_name"] in target_names
+        }
         stations: dict[str, Station] = {}
-        for tid, times in raw_times.items():
+        dropped = 0
+        for tid, times in list(raw_times.items()):
             times.sort(key=lambda x: x[0])
             fill_missing_times(times)
+            if region.only_via_targets:
+                trimmed = trim_to_targets(times, target_keys)
+                if trimmed is None:
+                    del raw_times[tid]
+                    dropped += 1
+                    continue
+                times[:] = trimmed
             trip = trips[tid]
             trip.stop_times = [(i, *t[1:]) for i, t in enumerate(times)]
             for t in times:
@@ -350,6 +408,8 @@ def load_feed(path: Path, prefix: str, window: tuple[dt.date, dt.date]) -> Feed:
                         lat=float(r["stop_lat"]), lon=float(r["stop_lon"]),
                     )
                 stations[key].agencies.add(trip.agency)
+        if region.only_via_targets:
+            log.info("%s: odrzucono %d kursów niedojeżdżających do celu", prefix, dropped)
         # Kursy z mniej niż dwoma przystankami są bezużyteczne.
         kept = [t for t in trips.values() if len(t.stop_times) >= 2]
 
@@ -395,12 +455,12 @@ def assign_groups(stations: list[Station]) -> list[tuple[str, str, float]]:
     return pairs
 
 
-def resolve_default_targets(stations: list[Station]) -> list[list[int]]:
+def resolve_default_targets(stations: list[Station], region: Region) -> list[list[int]]:
     by_name: dict[str, list[Station]] = defaultdict(list)
     for s in stations:
         by_name[s.name].append(s)
     result = []
-    for group in DEFAULT_TARGETS:
+    for group in region.targets:
         ids = []
         for name in group:
             found = by_name.get(name)
@@ -448,7 +508,6 @@ CREATE TABLE stop_time(
 CREATE INDEX stop_time_station_dep ON stop_time(station_id, dep_s);
 """
 
-AGENCY_ORDER = {"KM": 0, "SKM": 1, "WKD": 2}
 
 
 @dataclass
@@ -458,7 +517,9 @@ class BuildResult:
     platform_coverage: dict[str, float]
 
 
-def build_database(feeds: list[Feed], today: dt.date, out_path: Path) -> BuildResult:
+def build_database(feeds: list[Feed], today: dt.date, out_path: Path, region: Region) -> BuildResult:
+    agency_codes = list(region.agencies.values()) + (["WKD"] if region.with_wkd else [])
+    agency_order = {code: i for i, code in enumerate(agency_codes)}
     stations_by_key: dict[str, Station] = {}
     for f in feeds:
         stations_by_key.update(f.stations)
@@ -471,7 +532,7 @@ def build_database(feeds: list[Feed], today: dt.date, out_path: Path) -> BuildRe
 
     for a, b, d in assign_groups(stations):
         log.info("Grupa stacji: %s ↔ %s (%.0f m)", a, b, d)
-    targets = resolve_default_targets(stations)
+    targets = resolve_default_targets(stations, region)
 
     trips = sorted((t for f in feeds for t in f.trips), key=lambda t: t.key)
     valid_from = today - dt.timedelta(days=WINDOW_BEFORE_DAYS)
@@ -489,7 +550,7 @@ def build_database(feeds: list[Feed], today: dt.date, out_path: Path) -> BuildRe
             "INSERT INTO station VALUES (?,?,?,?,?,?,?)",
             [
                 (s.id, s.name, normalize_name(s.name), round(s.lat, 6), round(s.lon, 6),
-                 ",".join(sorted(s.agencies, key=AGENCY_ORDER.get)), s.group_id)
+                 ",".join(sorted(s.agencies, key=agency_order.get)), s.group_id)
                 for s in stations
             ],
         )
@@ -507,7 +568,7 @@ def build_database(feeds: list[Feed], today: dt.date, out_path: Path) -> BuildRe
                 total[t.agency] += len(t.stop_times)
                 with_platform[t.agency] += sum(1 for st in t.stop_times if st[4])
 
-        for agency in ("KM", "SKM", "WKD"):
+        for agency in agency_codes:
             if agency not in last_date:
                 raise BuildError(f"Brak kursów przewoźnika {agency} w oknie dat")
         valid_to_int = min(last_date.values())
@@ -520,7 +581,7 @@ def build_database(feeds: list[Feed], today: dt.date, out_path: Path) -> BuildRe
             "valid_to": valid_to.isoformat(),
             "source_attribution": "\n".join(
                 [a for f in feeds for a in f.attribution]
-                + ["Data: Warszawska Kolej Dojazdowa (CC0), GTFS: Mikołaj Kuranowski (https://mkuran.pl/gtfs/)"]
+                + list(region.attribution)
             ),
             "default_targets": json.dumps(targets),
         }
@@ -643,7 +704,8 @@ def resolve_input(arg: str, cache_dir: Path, name: str, previous: dict | None, f
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--pt", default=PT_URL, help="ścieżka lub URL polish_trains.zip")
-    p.add_argument("--wkd", default=WKD_URL, help="ścieżka lub URL wkd.zip")
+    p.add_argument("--wkd", default=WKD_URL, help="ścieżka lub URL wkd.zip (tylko region z WKD)")
+    p.add_argument("--region", choices=sorted(REGIONS), default=DEFAULT_REGION, help="region: przewoźnicy i stacje docelowe")
     p.add_argument("--out", type=Path, required=True, help="katalog wyjściowy")
     p.add_argument("--cache", type=Path, default=None, help="katalog na pobrane pliki")
     p.add_argument("--today", type=dt.date.fromisoformat, default=None, help="data „dziś\" (Europe/Warsaw)")
@@ -667,7 +729,11 @@ def main(argv: list[str] | None = None) -> int:
     cache = args.cache or tmp
     cache.mkdir(parents=True, exist_ok=True)
     try:
-        inputs = {"pt": args.pt, "wkd": args.wkd}
+        region = REGIONS[args.region]
+        log.info("Region: %s", args.region)
+        inputs = {"pt": args.pt}
+        if region.with_wkd:
+            inputs["wkd"] = args.wkd
         paths: dict[str, Path | None] = {}
         sources: dict[str, dict] = {}
         any_changed = False
@@ -683,8 +749,8 @@ def main(argv: list[str] | None = None) -> int:
             if paths[prefix] is None:  # 304, ale inne źródło się zmieniło → pobierz bezwarunkowo
                 paths[prefix], _, sources[arg] = resolve_input(arg, cache, f"{prefix}.zip", None, True)
 
-        feeds = [load_feed(paths["pt"], "pt", window), load_feed(paths["wkd"], "wkd", window)]
-        result = build_database(feeds, today, tmp / "timetable.sqlite")
+        feeds = [load_feed(paths[prefix], prefix, window, region) for prefix in inputs]
+        result = build_database(feeds, today, tmp / "timetable.sqlite", region)
         validate(result, today)
         write_outputs(result, args.out, {k: v for k, v in sources.items() if v}, today)
         set_output("publish", "true")

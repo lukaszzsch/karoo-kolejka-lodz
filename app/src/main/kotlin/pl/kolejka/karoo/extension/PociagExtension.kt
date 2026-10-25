@@ -68,7 +68,7 @@ class PociagExtension : KarooExtension(EXTENSION_ID, BuildConfig.VERSION_NAME) {
     }
 
     companion object {
-        const val EXTENSION_ID = "pociag"
+        const val EXTENSION_ID = "pociag_lodz"
 
         /** Proces może tworzyć serwis wielokrotnie (P6) — sprawdzenie przy starcie tylko raz. */
         @Volatile private var started = false

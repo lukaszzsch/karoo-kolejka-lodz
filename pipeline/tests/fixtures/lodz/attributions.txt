@@ -1,0 +1,2 @@
+attribution_id,organization_name,attribution_url,is_producer,is_operator,is_authority,is_data_source
+PLK,Data: PKP PLK,https://example.invalid/plk,0,1,0,1

@@ -1,0 +1,4 @@
+agency_id,agency_name,agency_url,agency_timezone
+LKA,Łódzka Kolej Aglomeracyjna,https://lka.lodzkie.pl/,Europe/Warsaw
+PR,POLREGIO,https://polregio.pl/,Europe/Warsaw
+IC,PKP Intercity,https://intercity.pl/,Europe/Warsaw

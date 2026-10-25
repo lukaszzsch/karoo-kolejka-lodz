@@ -4,6 +4,7 @@ import pl.kolejka.karoo.domain.geo.LatLon
 import pl.kolejka.karoo.domain.model.Station
 import pl.kolejka.karoo.domain.model.Train
 import pl.kolejka.karoo.domain.plan.Eta
+import pl.kolejka.karoo.domain.plan.NearbyOption
 import pl.kolejka.karoo.domain.plan.TileState
 import pl.kolejka.karoo.domain.plan.TrainClass
 import pl.kolejka.karoo.domain.plan.TrainOption
@@ -43,6 +44,17 @@ object PreviewData {
 
     val finishEta = Eta(at(17, 10), approximate = false)
     const val REMAINING_M = 24_300.0
+
+    // Tryb awaryjny (SPEC 6.10): Zgierz → Łódź Kaliska.
+    private val zgierz = Station(1, "Zgierz", "zgierz", LatLon(51.856, 19.406), "ŁKA,PR", null)
+
+    private fun lkaTrain(id: Int, dep: LocalTime, arr: LocalTime) =
+        train(id, dep, arr, "1").copy(agency = "ŁKA", routeShortName = null)
+
+    val nearby = TileState.Nearby(
+        ride = NearbyOption(zgierz, 1_900.0, 2_500.0, at(17, 30), lkaTrain(6, LocalTime.of(17, 42), LocalTime.of(18, 1)), isLast = false, tomorrow = false),
+        walk = NearbyOption(zgierz, 1_900.0, 2_500.0, at(17, 50), lkaTrain(7, LocalTime.of(18, 12), LocalTime.of(18, 31)), isLast = true, tomorrow = false),
+    )
 
     val upcoming = listOf(
         UpcomingStation(sulejowek, 21_000.0, 300.0, 9_400.0, at(16, 25), listOf(train(4, LocalTime.of(16, 34), LocalTime.of(17, 0), "1"))),

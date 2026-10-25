@@ -2,6 +2,7 @@ package pl.kolejka.karoo.extension
 
 import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.models.DataType
+import io.hammerhead.karooext.models.OnLocationChanged
 import io.hammerhead.karooext.models.OnNavigationState
 import io.hammerhead.karooext.models.OnNavigationState.NavigationState
 import io.hammerhead.karooext.models.LaunchPinDrop
@@ -44,6 +45,12 @@ interface KarooSource {
 
     /** „Prowadź do stacji" — Karoo otwiera pinezkę z opcją nawigacji (SPEC 4.1). */
     fun navigateTo(station: Station): Boolean
+
+    /**
+     * Bieżąca pozycja (karoo-ext 1.1.3+: `OnLocationChanged`). Subskrybowana tylko przez
+     * kafelek w trybie awaryjnym, gdy jest widoczny (SPEC 6.10, 11.2).
+     */
+    val location: Flow<LatLon>
 }
 
 class RealKarooSource(private val karoo: KarooSystemService) : KarooSource {
@@ -84,6 +91,8 @@ class RealKarooSource(private val karoo: KarooSystemService) : KarooSource {
             ),
         ),
     ).also { FileLog.i("Prowadź do stacji ${station.name}: dispatched=$it") }
+
+    override val location: Flow<LatLon> = karoo.consumerFlow<OnLocationChanged>().map { LatLon(it.lat, it.lng) }
 
     private fun NavigationState.toNavInput(): NavInput = when (this) {
         NavigationState.Idle -> NavInput.Idle

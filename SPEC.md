@@ -329,6 +329,31 @@ Własny dekoder Google Encoded Polyline z parametrem precyzji (+ testy). Uproszc
 
 ---
 
+### 6.10 Tryb awaryjny „z pozycji" (wariant łódzki)
+
+Wersja „Pociąg do Łodzi" (`BuildConfig.NEARBY_MODE = true`) służy do awaryjnego powrotu z
+treningu: bez trasy i bez nawigacji, z bieżącej pozycji. `NearbyPlanner`:
+
+1. Stacje w promieniu `nearbyRadiusM` (20 km) od pozycji, najwyżej 8 najbliższych.
+   Stacja celu ≤ 1 km → `AlreadyAtTarget`; brak stacji → `NoStationNearby(najbliższa)`.
+2. Dystans po drogach = linia prosta × `roadFactor` (1,3).
+3. Dwa warianty dojazdu: rowerem `emergencyRideKmh` (15 km/h — coś nie gra, jedziesz
+   ostrożnie) i pieszo z rowerem `walkKmh` (5 km/h). Gotowość = teraz + dojazd + `bufferMin`.
+4. Na każdej stacji pierwszy pociąg do celu odjeżdżający po gotowości (horyzont 20 h, czyli
+   także „jutro rano"); autobusy ZKA pomijane (`allowBus = false` — z rowerem zwykle się nie da).
+5. Wygrywa najwcześniejszy przyjazd do celu, remis → bliższa stacja. Najbliższa stacja nie
+   zawsze wygrywa.
+6. Histereza: poprzedni wybór zostaje, dopóki nowy nie dowozi ≥ 5 min wcześniej.
+7. Flagi: `OSTATNI` (po nim do 03:00 nic już nie jedzie), `jutro` (odjazd po najbliższej 03:00).
+
+Stany: `Nearby(ride, walk)`, `NoPosition`, `NoStationNearby`, `NoTrainsToday`, plus wspólne
+(`DataMissing`, `DataStale`, `AlreadyAtTarget`). Kafelek: wiersz 🚲 i wiersz 🚶; gdy pieszo
+wychodzi ten sam pociąg — tylko adnotacja „pieszo też zdążysz".
+
+Rozkład dla wariantu łódzkiego: `build_timetable.py --region lodz` — ŁKA + PolRegio (bez
+PKP Intercity: rower tylko z rezerwacją), cel Łódź Kaliska, tylko kursy z wysiadaniem na
+celu, przycięte po nim (PolRegio jeździ po całym kraju — bez filtra baza > 10 MB).
+
 ## 7. Kafelek (graficzne pole danych)
 
 ### 7.1 Warianty wg rozmiaru (`ViewConfig.gridSize` / `viewSize`)
@@ -382,6 +407,9 @@ combine(routeResult, etaMinute, timetableVersion, targets, settings)
 - Tik raz na minutę (przeliczenie zapasu/`v_req`) tylko gdy widok aktywny.
 - Strumień prędkości subskrybowany tylko przy wariancie szerokim.
 - Brak innych timerów i pollingu.
+- Tryb awaryjny (6.10): zamiast ETA — `OnLocationChanged` (subskrypcja tylko przy aktywnym
+  kafelku, `WhileSubscribed`) skwantowane do komórki ~300 × 300 m + ten sam tik minutowy.
+  Przeliczenie (≤ 8 + 2 zapytania do bazy) tylko przy zmianie komórki lub minuty.
 
 ### 7.4 Kliknięcie
 `PendingIntent` do `MainActivity` z `tab` zależnym od stanu (`Ok`→META, `NoRoute`→ALL, `NoStationNearFinish`→ON_ROUTE lub ALL) i `FLAG_ACTIVITY_SINGLE_TOP`. Ustawienie wyłączające klikalność (P3).
@@ -452,7 +480,7 @@ Przykładowe GPX w repo: trasa kończąca się przy stacji KM, przy stacji WKD, 
 ## 11. Stabilność i energia — reguły twarde
 
 1. Zero pracy w tle poza: jednorazowe sprawdzenie aktualizacji, subskrypcje potrzebne aktywnym widokom/aplikacji oraz `OnNavigationState` (lekki, potrzebny do powiadomienia).
-2. Strumienie ETA/dystansu/prędkości tylko gdy jest trasa **i** (aktywny kafelek **lub** otwarta aplikacja **lub** oczekujące powiadomienie); współdzielone `shareIn(WhileSubscribed(5_000))`.
+2. Strumienie ETA/dystansu/prędkości tylko gdy jest trasa **i** (aktywny kafelek **lub** otwarta aplikacja **lub** oczekujące powiadomienie); współdzielone `shareIn(WhileSubscribed(5_000))`. W trybie awaryjnym (6.10) zamiast nich `OnLocationChanged`, tylko przy aktywnym kafelku.
 3. Żadnych `GlobalScope`, `runBlocking` w ścieżkach UI/serwisu, żadnych pętli z `delay` poza minutowym tikiem z 7.3.
 4. Baza otwierana raz, read-only; kursory w `use {}`.
 5. Geometria raz na `routeKey`, cache LRU.
@@ -484,7 +512,8 @@ Każda faza kończy się zielonym `./gradlew test` (i `pytest`) oraz wpisem w `C
 **Faza 7 — Utwardzanie na rowerze.** Trasy z GPX z sekcji 10 w realu; zmiany trasy w trakcie jazdy; brak sieci; restart Karoo; pomiar CPU serwisu przez 1 h jazdy (cel: brak zauważalnego wpływu na baterię).
 
 ### Backlog (świadomie później / nie teraz)
-- **Później:** „Plan B" — kafelek z najbliższą stacją od bieżącej pozycji GPS; `InRideAlert` („przechodzę na 18:12", „do odjazdu 15 min"); stacje jako symbole na mapie (`startMap` + `ShowSymbols`); `BonusAction` pod przycisk.
+- **Zrobione w wariancie łódzkim (6.10):** kafelek z najbliższą stacją od bieżącej pozycji GPS.
+- **Później:** `InRideAlert` („przechodzę na 18:12", „do odjazdu 15 min"); stacje jako symbole na mapie (`startMap` + `ShowSymbols`); `BonusAction` pod przycisk.
 - **Gdyby rozszerzenie miało być udostępniane:** informacje o przewozie roweru (ZKA zwykle bez rowerów, WKD z płatnym biletem na rower, ew. pole `bikes_allowed`), wielojęzyczność, konfiguracja regionu.
 - **Nie robimy:** opóźnienia na żywo.
 

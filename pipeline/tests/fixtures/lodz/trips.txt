@@ -1,0 +1,7 @@
+trip_id,route_id,service_id,trip_headsign
+L1,LKA_1,ALL,Łódź Kaliska
+L2,LKA_1,ALL,Zgierz
+P1,PR_1,ALL,Łódź Widzew
+P2,PR_1,ALL,Sieradz
+P3,PR_1,ALL,Łódź Kaliska
+I1,IC_1,ALL,Łódź Kaliska

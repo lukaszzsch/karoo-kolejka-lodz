@@ -66,6 +66,24 @@ sealed interface TileState {
         val etaApproximate: Boolean,
     ) : TileState
 
+    // ---- tryb awaryjny „z pozycji" (SPEC 6.10)
+
+    /** Brak pozycji GPS (jeszcze nie ma fixa). */
+    data object NoPosition : TileState
+
+    /** Żadnej stacji w promieniu; [nearestM] — najbliższa w ogóle (jeśli jest w zasięgu szukania). */
+    data class NoStationNearby(val radiusM: Double, val nearestM: Double?) : TileState
+
+    /**
+     * Najlepszy pociąg do celu z okolicy w dwóch wariantach dojazdu na stację: rowerem
+     * i pieszo z rowerem. Null = w horyzoncie nic nie jedzie (lub nie zdążysz).
+     */
+    data class Nearby(
+        val ride: NearbyOption?,
+        val walk: NearbyOption?,
+        val dataStale: Boolean = false,
+    ) : TileState
+
     data class Ok(
         val station: Station,
         val stationDistanceM: Double,

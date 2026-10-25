@@ -1,0 +1,4 @@
+route_id,agency_id,route_short_name,route_long_name,route_type
+LKA_1,LKA,ŁKA,Zgierz — Łódź Kaliska,2
+PR_1,PR,R,Sieradz — Łódź,2
+IC_1,IC,IC,Intercity,2

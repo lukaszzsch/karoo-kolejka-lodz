@@ -1,8 +1,14 @@
-# Pociąg do Warszawy — rozszerzenie Hammerhead Karoo
+# Pociąg do Łodzi — rozszerzenie Hammerhead Karoo
 
-Rozszerzenie [karoo-ext](https://github.com/hammerheadnav/karoo-ext). Gdy meta trasy leży przy
-stacji KM / SKM Warszawa / WKD, pokazuje, którym pociągiem wrócisz do Warszawy i czy na niego
-zdążysz. Projekt na własny użytek (sideload). Pełna specyfikacja: [SPEC.md](SPEC.md).
+Rozszerzenie [karoo-ext](https://github.com/hammerheadnav/karoo-ext) na **awaryjny powrót
+pociągiem z treningu**. Bez trasy, z bieżącej pozycji: szuka stacji w promieniu 20 km
+i pokazuje najbliższy pociąg ŁKA / PolRegio do **Łodzi Kaliskiej** — w dwóch wariantach:
+🚲 rowerem (15 km/h) i 🚶 pieszo z rowerem (5 km/h). Wybiera najwcześniejszy przyjazd do
+Kaliskiej, a nie zawsze najbliższą stację. Bez PKP Intercity (rower tylko z rezerwacją) i bez
+autobusów zastępczych. Szczegóły: [SPEC.md](SPEC.md), sekcja 6.10.
+
+Powstało z „Pociąg do Warszawy" (ten sam kod, `NEARBY_MODE = false` i `--region warszawa`
+dają wersję warszawską). Projekt na własny użytek (sideload).
 
 ## Stan
 
@@ -30,7 +36,8 @@ Drugie źródło to GitHub Packages z tokenem `read:packages`. Token wpisz w
 ```bash
 cd pipeline
 uv run --python 3.12 --with-requirements requirements.txt pytest
-uv run --python 3.12 python build_timetable.py --out dist
+uv run --python 3.12 python build_timetable.py --out dist                 # region lodz
+uv run --python 3.12 python build_timetable.py --out dist --region warszawa
 ```
 
 ## Instalacja na Karoo
@@ -40,5 +47,5 @@ rozszerzenia nie zawsze sam się restartuje.
 
 ## Dane
 
-Rozkład: Koleje Mazowieckie, SKM Warszawa (PKP PLK, warunki ponownego wykorzystania informacji
-sektora publicznego), WKD (CC0). Feed GTFS przygotowuje [Mikołaj Kuranowski](https://mkuran.pl/gtfs/).
+Rozkład: Łódzka Kolej Aglomeracyjna, PolRegio (PKP PLK, warunki ponownego wykorzystania
+informacji sektora publicznego). Feed GTFS przygotowuje [Mikołaj Kuranowski](https://mkuran.pl/gtfs/).

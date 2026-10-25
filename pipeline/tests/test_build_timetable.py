@@ -35,7 +35,7 @@ def feeds_dir(tmp_path):
 def run(feeds_dir: Path, out: Path, *extra: str) -> int:
     pt = make_zip(feeds_dir / "pt", feeds_dir / "pt.zip")
     wkd = make_zip(feeds_dir / "wkd", feeds_dir / "wkd.zip")
-    return bt.main(["--pt", str(pt), "--wkd", str(wkd), "--out", str(out), "--today", TODAY.isoformat(), *extra])
+    return bt.main(["--region", "warszawa", "--pt", str(pt), "--wkd", str(wkd), "--out", str(out), "--today", TODAY.isoformat(), *extra])
 
 
 @pytest.fixture

@@ -16,8 +16,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import pl.kolejka.karoo.BuildConfig
 import pl.kolejka.karoo.data.SqliteTimetable
+import pl.kolejka.karoo.domain.geo.LatLon
 import pl.kolejka.karoo.domain.geo.Polyline
 import pl.kolejka.karoo.domain.geo.RouteAnalyzer
 import pl.kolejka.karoo.domain.geo.RouteGeometry
@@ -27,6 +30,7 @@ import pl.kolejka.karoo.domain.model.Settings
 import pl.kolejka.karoo.domain.model.TargetGroups
 import pl.kolejka.karoo.domain.plan.EtaEstimator
 import pl.kolejka.karoo.domain.plan.KarooEtaSample
+import pl.kolejka.karoo.domain.plan.NearbyPlanner
 import pl.kolejka.karoo.domain.plan.RideProgress
 import pl.kolejka.karoo.domain.plan.RouteContext
 import pl.kolejka.karoo.domain.plan.TileStabilizer
@@ -47,6 +51,10 @@ import kotlin.math.roundToLong
  * Nowy rozkład (po aktualizacji) lub zmiana ustawień budują potok od nowa. Strumienie
  * ETA/dystansu są subskrybowane tylko przy trasie i aktywnym kafelku (`WhileSubscribed`,
  * SPEC 11.2). Jedyny timer: tik minutowy przy trasie.
+ *
+ * Tryb awaryjny (BuildConfig.NEARBY_MODE, SPEC 6.10): zamiast nawigacji pozycja z Karoo.
+ * Przeliczenie tylko przy przesunięciu o ~300 m albo na tiku minutowym — pozycja przychodzi
+ * co sekundę, a każde przeliczenie to kilka zapytań do bazy.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TileEngine(
@@ -77,12 +85,41 @@ class TileEngine(
         private val upcoming = UpcomingStations(planner, clock)
         private val tracker = RouteTracker(::analyze, Dispatchers.Default)
         private val stabilizer = TileStabilizer()
+        private val nearby = NearbyPlanner(planner, index, clock)
+        private var lastNearby: TileState.Nearby? = null
         private var lastKarooEta: KarooEtaSample? = null
         private var lastRemaining: Pair<Double, java.time.Instant>? = null
         private var lastLoggedState: String? = null
         private var lastLogAt = 0L
 
-        fun models(): Flow<TileModel> =
+        fun models(): Flow<TileModel> = if (BuildConfig.NEARBY_MODE) nearbyModels() else routeModels()
+
+        private fun nearbyModels(): Flow<TileModel> =
+            combine(source.location.map<LatLon, LatLon?> { it }.onStart { emit(null) }, minuteTicker()) { p, minute -> p to minute }
+                .distinctUntilChanged { a, b -> a.second == b.second && cell(a.first) == cell(b.first) }
+                .conflate()
+                .map { (p, _) -> computeNearby(p) }
+                .flowOn(Dispatchers.Default)
+
+        private fun computeNearby(position: LatLon?): TileModel = try {
+            val state = nearby.plan(position, settings, targets, tt.dataStatus, lastNearby)
+            lastNearby = state as? TileState.Nearby
+            val kind = state.javaClass.simpleName
+            if (kind != lastLoggedState || clock.millis() - lastLogAt > 300_000) {
+                val desc = (state as? TileState.Nearby)?.let { n ->
+                    "ride=${n.ride?.let { "${it.station.name} ${it.train.departure}" }} walk=${n.walk?.let { "${it.station.name} ${it.train.departure}" }}"
+                }.orEmpty()
+                FileLog.i("Kafelek (awaryjny): $kind $desc")
+                lastLoggedState = kind
+                lastLogAt = clock.millis()
+            }
+            TileModel(state, stationName = nameOf)
+        } catch (e: Exception) {
+            FileLog.e("Błąd obliczeń kafelka (awaryjny)", e)
+            TileModel(TileState.Computing, stationName = nameOf)
+        }
+
+        private fun routeModels(): Flow<TileModel> =
             tracker.states(source.navigation, flowOf(GeometryConfig(settings.finishRadiusM, settings.routeRadiusM)))
                 .flatMapLatest { rs ->
                     when (rs) {
@@ -173,6 +210,10 @@ class TileEngine(
         }
     }
 
+    /** Komórka ~300 × 300 m (na szerokości Łodzi): zmiana komórki = przeliczenie. */
+    private fun cell(p: LatLon?): Pair<Long, Long>? =
+        p?.let { (it.lat / CELL_DEG_LAT).roundToLong() to (it.lon / CELL_DEG_LON).roundToLong() }
+
     private fun inputKey(r: RawStreams) = listOf(
         clock.millis() / 60_000,
         r.distanceToDestination?.let { (it / 250).roundToLong() },
@@ -184,5 +225,8 @@ class TileEngine(
     companion object {
         /** Ustalone w fazie 0 (docs/device-findings.md). */
         const val PRECISION = 5
+
+        private const val CELL_DEG_LAT = 0.0027
+        private const val CELL_DEG_LON = 0.0043
     }
 }
