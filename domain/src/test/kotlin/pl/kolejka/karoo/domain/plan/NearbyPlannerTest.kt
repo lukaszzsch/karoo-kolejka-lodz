@@ -11,6 +11,7 @@ import pl.kolejka.karoo.domain.model.Settings
 import pl.kolejka.karoo.domain.model.Station
 import pl.kolejka.karoo.domain.model.TargetGroups
 import pl.kolejka.karoo.domain.text.NameShortener
+import pl.kolejka.karoo.domain.text.TileLayout
 import pl.kolejka.karoo.domain.text.TileModel
 import pl.kolejka.karoo.domain.text.TileText
 import pl.kolejka.karoo.domain.time.ServiceTime
@@ -23,6 +24,10 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneOffset
+
+/** Pierwszy wiersz (jeden cel) — większość testów ma tylko Kaliską. */
+private val TileState.Nearby.ride get() = rows[0].ride
+private val TileState.Nearby.walk get() = rows[0].walk
 
 /** Tryb awaryjny „z pozycji" (SPEC 6.10). */
 class NearbyPlannerTest {
@@ -101,10 +106,14 @@ class NearbyPlannerTest {
         assertEquals(at(4, 50, day.plusDays(1)), st.walk!!.train.departure)
         assertTrue(st.walk!!.tomorrow)
 
-        val lines = TileText.lines(TileModel(st), compact = false).map { it.fullText }
-        assertTrue(lines.toString(), lines.first().startsWith("${TileText.BIKE} Zgierz 22:30→22:50"))
-        assertTrue(lines.toString(), lines.first().endsWith("OSTATNI"))
-        assertTrue(lines.toString(), lines.any { it.startsWith("${TileText.WALK} Zgierz jutro 04:50→05:10") })
+        val names: (Int) -> String = { if (it == 1000) "Łódź Kaliska" else "#$it" }
+        val tall = TileText.lines(TileModel(st, stationName = names), TileLayout.TALL).map { it.fullText }
+        assertEquals(tall.toString(), "→ Łódź Kaliska", tall[0])
+        assertTrue(tall.toString(), tall[1].startsWith("${TileText.BIKE} Zgierz 22:30→22:50"))
+        assertTrue(tall.toString(), tall[1].endsWith("OSTATNI"))
+        assertTrue(tall.toString(), tall[2].startsWith("${TileText.WALK} Zgierz jutro 04:50→05:10"))
+        val wide = TileText.lines(TileModel(st, stationName = names), TileLayout.WIDE).map { it.text }
+        assertEquals(listOf("Kalis.: ${TileText.BIKE} Zgierz 22:30 · ${TileText.WALK} Zgierz jutro 04:50"), wide)
     }
 
     @Test
@@ -118,14 +127,35 @@ class NearbyPlannerTest {
     }
 
     @Test
-    fun `same train on foot is shown as a note`() {
-        val trips = listOf(trip(1, 1100, s(18, 20), s(18, 40)))
-        val st = plan(at(17, 0), trips) as TileState.Nearby
-        assertEquals(st.ride!!.train.key, st.walk!!.train.key)
-        val lines = TileText.lines(TileModel(st), compact = false).map { it.text }
-        assertTrue(lines.toString(), lines.any { it.startsWith("${TileText.WALK} pieszo też zdążysz") })
-        val compact = TileText.lines(TileModel(st), compact = true).map { it.text }
-        assertEquals(listOf("${TileText.BIKE} 18:20→18:40", "Zgierz", "${TileText.WALK} też"), compact)
+    fun `three targets always give six options, missing ones as dash`() {
+        val fabryczna = station(1600, "Łódź Fabryczna", LatLon(51.769, 19.467))
+        val widzew = station(1300, "Łódź Widzew", LatLon(51.757, 19.516))
+        val all = stations.filter { it.id != 1300 } + fabryczna + widzew
+        val trips = listOf(
+            trip(1, 1100, s(18, 0), s(18, 30)), // → Kaliska
+            TripData(2, setOf(day), listOf(StopData(1100, s(17, 50)), StopData(1600, s(18, 15))), agency = "ŁKA"), // → Fabryczna
+        )
+        val now = at(17, 0)
+        val p = NearbyPlanner(TrainPlanner(InMemoryTimetable(all, trips), Clock.fixed(now, ZoneOffset.UTC)), SpatialIndex(all), Clock.fixed(now, ZoneOffset.UTC))
+        val three = TargetGroups(listOf(setOf(1000), setOf(1600), setOf(1300)))
+        val st = p.plan(pos, Settings(emergencyRideKmh = 15.0), three, data) as TileState.Nearby
+        assertEquals(listOf(1000, 1600, 1300), st.rows.map { it.targetStationId })
+        assertEquals(at(18, 0), st.rows[0].ride!!.train.departure)
+        assertEquals(at(17, 50), st.rows[1].ride!!.train.departure)
+        assertEquals(null, st.rows[2].ride)
+
+        val names = all.associate { it.id to it.name }
+        val m = TileModel(st, stationName = { names[it] ?: "#$it" })
+        val B = TileText.BIKE
+        val W = TileText.WALK
+        assertEquals(
+            listOf("Kal. ${B}18:00 ${W}18:00", "Fab. ${B}17:50 ${W}17:50", "Wid. ${B}— ${W}—"),
+            TileText.lines(m, TileLayout.COMPACT).map { it.text },
+        )
+        val tall = TileText.lines(m, TileLayout.TALL).map { it.text }
+        assertEquals(9, tall.size)
+        assertEquals(listOf("→ Łódź Kaliska", "→ Łódź Fabryczna", "→ Łódź Widzew"), listOf(tall[0], tall[3], tall[6]))
+        assertEquals(listOf("$B —", "$W —"), tall.subList(7, 9))
     }
 
     @Test
@@ -136,7 +166,8 @@ class NearbyPlannerTest {
         )
         val first = plan(at(17, 0), trips) as TileState.Nearby
         assertEquals("Zgierz Południe", first.ride!!.station.name)
-        val prev = first.copy(ride = first.ride!!.copy(station = zgierz, train = (plan(at(17, 0), listOf(trips[0])) as TileState.Nearby).ride!!.train))
+        val zgierzOpt = first.ride!!.copy(station = zgierz, train = (plan(at(17, 0), listOf(trips[0])) as TileState.Nearby).ride!!.train)
+        val prev = first.copy(rows = listOf(first.rows[0].copy(ride = zgierzOpt)))
         val kept = plan(at(17, 0), trips, previous = prev) as TileState.Nearby
         assertEquals("Zgierz", kept.ride!!.station.name)
 

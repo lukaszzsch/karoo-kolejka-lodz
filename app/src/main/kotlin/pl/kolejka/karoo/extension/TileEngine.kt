@@ -107,7 +107,9 @@ class TileEngine(
             val kind = state.javaClass.simpleName
             if (kind != lastLoggedState || clock.millis() - lastLogAt > 300_000) {
                 val desc = (state as? TileState.Nearby)?.let { n ->
-                    "ride=${n.ride?.let { "${it.station.name} ${it.train.departure}" }} walk=${n.walk?.let { "${it.station.name} ${it.train.departure}" }}"
+                    n.rows.joinToString(" | ") { r ->
+                        "${nameOf(r.targetStationId)}: ride=${r.ride?.let { "${it.station.name} ${it.train.departure}" }} walk=${r.walk?.let { "${it.station.name} ${it.train.departure}" }}"
+                    }
                 }.orEmpty()
                 FileLog.i("Kafelek (awaryjny): $kind $desc")
                 lastLoggedState = kind

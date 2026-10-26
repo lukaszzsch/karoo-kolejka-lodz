@@ -85,7 +85,8 @@ REGIONS = {
     # Awaryjny powrót do Łodzi: bez PKP Intercity (rower tylko z rezerwacją).
     "lodz": Region(
         agencies={"Łódzka Kolej Aglomeracyjna": "ŁKA", "PolRegio": "PR"},
-        targets=[["Łódź Kaliska"]],
+        # Kafelek pokazuje wszystkie trzy: 🚲 i 🚶 do każdej (SPEC 6.10).
+        targets=[["Łódź Kaliska"], ["Łódź Fabryczna"], ["Łódź Widzew"]],
         with_wkd=False,
         only_via_targets=True,
         attribution=("GTFS: Mikołaj Kuranowski (https://mkuran.pl/gtfs/)",),

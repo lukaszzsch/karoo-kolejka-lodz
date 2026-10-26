@@ -340,18 +340,22 @@ treningu: bez trasy i bez nawigacji, z bieżącej pozycji. `NearbyPlanner`:
 3. Dwa warianty dojazdu: rowerem `emergencyRideKmh` (30 km/h) i pieszo z rowerem `walkKmh` (5 km/h). Gotowość = teraz + dojazd + `bufferMin`.
 4. Na każdej stacji pierwszy pociąg do celu odjeżdżający po gotowości (horyzont 20 h, czyli
    także „jutro rano"); autobusy ZKA pomijane (`allowBus = false` — z rowerem zwykle się nie da).
-5. Wygrywa najwcześniejszy przyjazd do celu, remis → bliższa stacja. Najbliższa stacja nie
-   zawsze wygrywa.
+5. Osobno dla każdej grupy celów (domyślnie Łódź Kaliska, Łódź Fabryczna, Łódź Widzew):
+   wygrywa najwcześniejszy przyjazd do tego celu, remis → bliższa stacja. Najbliższa stacja
+   nie zawsze wygrywa. Stacja celu nie jest stacją odjazdu do samej siebie, ale może nią być
+   dla innego celu (z Widzewa na Kaliską).
 6. Histereza: poprzedni wybór zostaje, dopóki nowy nie dowozi ≥ 5 min wcześniej.
 7. Flagi: `OSTATNI` (po nim do 03:00 nic już nie jedzie), `jutro` (odjazd po najbliższej 03:00).
 
-Stany: `Nearby(ride, walk)`, `NoPosition`, `NoStationNearby`, `NoTrainsToday`, plus wspólne
-(`DataMissing`, `DataStale`, `AlreadyAtTarget`). Kafelek: wiersz 🚲 i wiersz 🚶; gdy pieszo
-wychodzi ten sam pociąg — tylko adnotacja „pieszo też zdążysz".
+Stany: `Nearby(rows)` — wiersz na cel z wariantami 🚲 i 🚶, `NoPosition`, `NoStationNearby`,
+`NoTrainsToday` (żadnej z opcji), plus wspólne (`DataMissing`, `DataStale`, `AlreadyAtTarget`).
+Kafelek zawsze pokazuje wszystkie 6 opcji (brak pociągu = „—"): wąski i szeroki — linia na cel
+(„Kalis.: 🚲 Zgierz 17:42 · 🚶 Żabien. 18:07"), wysoki — nagłówek celu i linia na wariant
+(stacja, odjazd → przyjazd, dystans, OSTATNI). Koszt przeliczenia: ≤ 8 stacji × 3 cele zapytań.
 
 Rozkład dla wariantu łódzkiego: `build_timetable.py --region lodz` — ŁKA + PolRegio (bez
-PKP Intercity: rower tylko z rezerwacją), cel Łódź Kaliska, tylko kursy z wysiadaniem na
-celu, przycięte po nim (PolRegio jeździ po całym kraju — bez filtra baza > 10 MB).
+PKP Intercity: rower tylko z rezerwacją), cele Łódź Kaliska, Łódź Fabryczna, Łódź Widzew;
+tylko kursy z wysiadaniem na którymś z celów, przycięte po ostatnim (PolRegio jeździ po całym kraju — bez filtra baza > 10 MB).
 
 ## 7. Kafelek (graficzne pole danych)
 

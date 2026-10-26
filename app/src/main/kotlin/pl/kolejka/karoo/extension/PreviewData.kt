@@ -5,6 +5,7 @@ import pl.kolejka.karoo.domain.model.Station
 import pl.kolejka.karoo.domain.model.Train
 import pl.kolejka.karoo.domain.plan.Eta
 import pl.kolejka.karoo.domain.plan.NearbyOption
+import pl.kolejka.karoo.domain.plan.NearbyRow
 import pl.kolejka.karoo.domain.plan.TileState
 import pl.kolejka.karoo.domain.plan.TrainClass
 import pl.kolejka.karoo.domain.plan.TrainOption
@@ -45,15 +46,24 @@ object PreviewData {
     val finishEta = Eta(at(17, 10), approximate = false)
     const val REMAINING_M = 24_300.0
 
-    // Tryb awaryjny (SPEC 6.10): Zgierz → Łódź Kaliska.
-    private val zgierz = Station(1, "Zgierz", "zgierz", LatLon(51.856, 19.406), "ŁKA,PR", null)
+    // Tryb awaryjny (SPEC 6.10): 3 cele × 🚲/🚶.
+    private val zgierz = Station(11, "Zgierz", "zgierz", LatLon(51.856, 19.406), "ŁKA,PR", null)
+    private val zabieniec = Station(12, "Łódź Żabieniec", "lodz zabieniec", LatLon(51.786, 19.414), "ŁKA,PR", null)
 
     private fun lkaTrain(id: Int, dep: LocalTime, arr: LocalTime) =
         train(id, dep, arr, "1").copy(agency = "ŁKA", routeShortName = null)
 
+    private fun opt(st: Station, roadM: Double, dep: LocalTime, arr: LocalTime, isLast: Boolean = false) =
+        NearbyOption(st, roadM / 1.3, roadM, at(dep.hour, dep.minute).minusSeconds(600), lkaTrain(dep.toSecondOfDay(), dep, arr), isLast, tomorrow = false)
+
+    val nearbyNames: (Int) -> String = { mapOf(21 to "Łódź Kaliska", 22 to "Łódź Fabryczna", 23 to "Łódź Widzew")[it] ?: "?" }
+
     val nearby = TileState.Nearby(
-        ride = NearbyOption(zgierz, 1_900.0, 2_500.0, at(17, 30), lkaTrain(6, LocalTime.of(17, 42), LocalTime.of(18, 1)), isLast = false, tomorrow = false),
-        walk = NearbyOption(zgierz, 1_900.0, 2_500.0, at(17, 50), lkaTrain(7, LocalTime.of(18, 12), LocalTime.of(18, 31)), isLast = true, tomorrow = false),
+        rows = listOf(
+            NearbyRow(0, 21, opt(zgierz, 2_500.0, LocalTime.of(17, 42), LocalTime.of(18, 1)), opt(zabieniec, 2_300.0, LocalTime.of(18, 7), LocalTime.of(18, 12))),
+            NearbyRow(1, 22, opt(zgierz, 2_500.0, LocalTime.of(17, 50), LocalTime.of(18, 15)), opt(zgierz, 2_500.0, LocalTime.of(18, 20), LocalTime.of(18, 45))),
+            NearbyRow(2, 23, opt(zabieniec, 2_300.0, LocalTime.of(17, 55), LocalTime.of(18, 18)), opt(zabieniec, 2_300.0, LocalTime.of(18, 55), LocalTime.of(19, 18), isLast = true)),
+        ),
     )
 
     val upcoming = listOf(

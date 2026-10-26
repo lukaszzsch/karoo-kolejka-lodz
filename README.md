@@ -2,9 +2,9 @@
 
 Rozszerzenie [karoo-ext](https://github.com/hammerheadnav/karoo-ext) na **awaryjny powrót
 pociągiem z treningu**. Bez trasy, z bieżącej pozycji: szuka stacji w promieniu 20 km
-i pokazuje najbliższy pociąg ŁKA / PolRegio do **Łodzi Kaliskiej** — w dwóch wariantach:
-🚲 rowerem (30 km/h) i 🚶 pieszo z rowerem (5 km/h). Wybiera najwcześniejszy przyjazd do
-Kaliskiej, a nie zawsze najbliższą stację. Bez PKP Intercity (rower tylko z rezerwacją) i bez
+i pokazuje najbliższy pociąg ŁKA / PolRegio do **Łodzi Kaliskiej, Fabrycznej i Widzewa** —
+do każdej w dwóch wariantach: 🚲 rowerem (30 km/h) i 🚶 pieszo z rowerem (5 km/h), razem
+6 opcji. Wybiera najwcześniejszy przyjazd, a nie zawsze najbliższą stację. Bez PKP Intercity (rower tylko z rezerwacją) i bez
 autobusów zastępczych. Szczegóły: [SPEC.md](SPEC.md), sekcja 6.10.
 
 Powstało z „Pociąg do Warszawy" (ten sam kod, `NEARBY_MODE = false` i `--region warszawa`

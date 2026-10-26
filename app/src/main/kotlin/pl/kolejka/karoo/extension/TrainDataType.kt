@@ -33,7 +33,7 @@ class TrainDataType(extension: String, private val engine: () -> TileEngine) : D
         scope.launch {
             if (config.preview) {
                 val preview = if (BuildConfig.NEARBY_MODE) {
-                    TileModel(PreviewData.nearby)
+                    TileModel(PreviewData.nearby, stationName = PreviewData.nearbyNames)
                 } else {
                     TileModel(PreviewData.state, PreviewData.upcoming, PreviewData.names, PreviewData.finishEta, PreviewData.REMAINING_M)
                 }

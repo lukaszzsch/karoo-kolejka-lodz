@@ -75,12 +75,12 @@ sealed interface TileState {
     data class NoStationNearby(val radiusM: Double, val nearestM: Double?) : TileState
 
     /**
-     * Najlepszy pociąg do celu z okolicy w dwóch wariantach dojazdu na stację: rowerem
+     * Jeden wiersz na grupę celów (Kaliska / Fabryczna / Widzew), w kolejności z ustawień.
+     * Każdy wiersz ma najlepszy pociąg w dwóch wariantach dojazdu na stację: rowerem
      * i pieszo z rowerem. Null = w horyzoncie nic nie jedzie (lub nie zdążysz).
      */
     data class Nearby(
-        val ride: NearbyOption?,
-        val walk: NearbyOption?,
+        val rows: List<NearbyRow>,
         val dataStale: Boolean = false,
     ) : TileState
 

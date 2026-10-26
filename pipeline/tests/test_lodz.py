@@ -64,27 +64,27 @@ def test_default_region_is_lodz():
 
 def test_only_lka_and_polregio_no_intercity(con):
     assert {r[0] for r in con.execute("SELECT DISTINCT agency FROM trip")} == {"ŁKA", "PR"}
-    assert con.execute("SELECT count(*) FROM trip").fetchone()[0] == 2  # L1, P1
+    assert con.execute("SELECT count(*) FROM trip").fetchone()[0] == 3  # L1, P1, F1
 
 
 def test_trips_not_reaching_kaliska_dropped(con):
     # L2 rusza z Kaliskiej, P2 jej nie mija, P3 nie pozwala tam wysiąść.
     assert "Kraków Główny" not in names(con)
-    assert headsigns(con) == {"Łódź Kaliska", "Łódź Widzew"}
+    assert headsigns(con) == {"Łódź Kaliska", "Łódź Widzew", "Łódź Fabryczna"}
 
 
-def test_trip_trimmed_after_target(con):
+def test_trip_kept_through_all_targets(con):
     tid = con.execute("SELECT id FROM trip WHERE agency='PR'").fetchone()[0]
     st = con.execute(
         "SELECT s.name FROM stop_time t JOIN station s ON s.id=t.station_id WHERE trip_id=? ORDER BY seq", (tid,)
     ).fetchall()
-    assert [r[0] for r in st] == ["Sieradz", "Pabianice", "Łódź Kaliska"]
-    assert "Łódź Widzew" not in names(con)
+    # Widzew też jest celem — kurs nie jest przycinany po Kaliskiej.
+    assert [r[0] for r in st] == ["Sieradz", "Pabianice", "Łódź Kaliska", "Łódź Widzew"]
 
 
-def test_default_target_kaliska(con):
+def test_default_targets_three_lodz_stations(con):
     meta = dict(con.execute("SELECT key, value FROM meta").fetchall())
-    assert json.loads(meta["default_targets"]) == [[1000]]
+    assert json.loads(meta["default_targets"]) == [[1000], [1600], [1300]]
     assert "WKD" not in meta["source_attribution"]
     assert "mkuran.pl" in meta["source_attribution"]
     assert con.execute("SELECT agencies FROM station WHERE id=1000").fetchone()[0] == "ŁKA,PR"

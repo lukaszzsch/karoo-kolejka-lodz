@@ -3,7 +3,7 @@
     <string name="extension_name">Pociąg do Łodzi</string>
 
     <string name="tile_name">Pociąg do Łodzi</string>
-    <string name="tile_description">Awaryjny powrót: najbliższy pociąg do Łodzi Kaliskiej ze stacji w okolicy</string>
+    <string name="tile_description">Awaryjny powrót: najbliższe pociągi do Łodzi Kaliskiej, Fabrycznej i Widzewa ze stacji w okolicy</string>
 
     <!-- Ekran „O danych" (SPEC 8.4) -->
     <string name="about_title">Pociąg do Łodzi</string>
@@ -12,7 +12,7 @@
     <string name="about_valid_to">Ważny do: %1$s</string>
     <string name="about_stations">Stacji: %1$d</string>
     <string name="about_missing">Brak rozkładu</string>
-    <string name="about_hint">Dodaj pole „Pociąg do Łodzi” do strony profilu jazdy. Działa bez trasy: szuka stacji w promieniu 20 km od Twojej pozycji i pokazuje najbliższy pociąg ŁKA / PolRegio do Łodzi Kaliskiej — rowerem (30 km/h) i pieszo z rowerem (5 km/h). Rozkład aktualizuje się sam przy starcie Karoo.</string>
+    <string name="about_hint">Dodaj pole „Pociąg do Łodzi” do strony profilu jazdy. Działa bez trasy: szuka stacji w promieniu 20 km od Twojej pozycji i pokazuje najbliższe pociągi ŁKA / PolRegio do Łodzi Kaliskiej, Fabrycznej i Widzewa — do każdej rowerem (30 km/h) i pieszo z rowerem (5 km/h). Rozkład aktualizuje się sam przy starcie Karoo.</string>
     <string name="about_sources">Źródła danych</string>
     <string name="about_log">Log (ostatnie wpisy)</string>
     <string name="about_refresh">Odśwież</string>

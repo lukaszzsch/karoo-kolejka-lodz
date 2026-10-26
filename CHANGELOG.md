@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Wariant łódzki — trzy stacje docelowe, 6 opcji (2026-10-26)
+
+- Cele: Łódź Kaliska, Łódź Fabryczna, Łódź Widzew (`default_targets`); rozkład zawiera kursy
+  do każdej z nich.
+- `NearbyPlanner` liczy każdy cel osobno; `TileState.Nearby(rows)` — wiersz na cel z 🚲 i 🚶.
+  Kafelek zawsze pokazuje wszystkie 6 opcji (brak = „—"), układ zależny od rozmiaru pola.
+- Rowerem 30 km/h (było 15).
+
 ### Wariant łódzki — tryb awaryjny „z pozycji" (2026-10-25)
 
 - Osobna aplikacja „Pociąg do Łodzi" (`pl.kolejka.karoo.lodz`, rozszerzenie `pociag_lodz`,

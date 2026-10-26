@@ -4,6 +4,7 @@ import pl.kolejka.karoo.domain.model.Station
 import pl.kolejka.karoo.domain.model.Train
 import pl.kolejka.karoo.domain.plan.Eta
 import pl.kolejka.karoo.domain.plan.NearbyOption
+import pl.kolejka.karoo.domain.plan.NearbyRow
 import pl.kolejka.karoo.domain.plan.TileState
 import pl.kolejka.karoo.domain.plan.TrainClass
 import pl.kolejka.karoo.domain.plan.TrainOption
@@ -88,55 +89,51 @@ object TileText {
         is TileState.NoStationNearby -> listOf(
             TileLine("Brak stacji ≤${km(s.radiusM)}", Emphasis.WARN),
         ) + listOfNotNull(s.nearestM?.let { TileLine("najbliższa ${km(it)}", Emphasis.DIM, LineSize.SMALL) })
-        is TileState.Nearby -> nearby(s, compact)
+        is TileState.Nearby -> nearby(s, m, if (compact) TileLayout.COMPACT else if (tall) TileLayout.TALL else TileLayout.WIDE)
     }
 
     /**
-     * Tryb awaryjny: 🚲 wariant rowerem i 🚶 pieszo z rowerem. Każdy: stacja i godziny
-     * (odjazd → przyjazd do celu), pod spodem mniejszą czcionką dystans, zapas, peron.
-     * Gdy pieszo wychodzi ten sam pociąg — tylko krótka adnotacja.
+     * Tryb awaryjny: wiersz na każdy cel (Kaliska / Fabryczna / Widzew), w każdym 🚲 rowerem
+     * i 🚶 pieszo z rowerem — przy trzech celach zawsze 6 opcji; brak pociągu = „—".
+     * Wąski i szeroki kafel: jedna linia na cel. Wysoki: nagłówek celu + linia na wariant
+     * (stacja, odjazd → przyjazd, dystans, OSTATNI).
      */
-    private fun nearby(s: TileState.Nearby, compact: Boolean): List<TileLine> {
+    private fun nearby(s: TileState.Nearby, m: TileModel, layout: TileLayout): List<TileLine> {
         val approx = if (s.dataStale) " ≈" else ""
-        val ride = s.ride
-        val walk = s.walk
-        val sameTrain = ride != null && walk != null && ride.station.id == walk.station.id && ride.train.key == walk.train.key
-        if (compact) {
-            return buildList {
-                val first = ride ?: walk!!
-                val mark = if (ride != null) BIKE else WALK
-                add(TileLine("$mark ${day(first)}${hm(first.train.departure)}→${hm(first.train.labelArrival)}", nearbyEmphasis(first)))
-                add(TileLine("${NameShortener.short(first.station.name, 11)}$approx", size = LineSize.MEDIUM))
-                if (ride != null && walk != null) {
-                    add(TileLine(if (sameTrain) "$WALK też" else "$WALK ${day(walk)}${hm(walk.train.departure)}", Emphasis.DIM, LineSize.SMALL))
-                } else if (ride != null) {
-                    add(TileLine("$WALK —", Emphasis.DIM, LineSize.SMALL))
-                }
+        return when (layout) {
+            TileLayout.TALL -> s.rows.flatMap { r ->
+                listOf(TileLine("→ ${NameShortener.short(m.stationName(r.targetStationId), 18)}$approx", size = LineSize.MEDIUM)) +
+                    nearbyTall(BIKE, r.ride) + nearbyTall(WALK, r.walk)
             }
-        }
-        return buildList {
-            if (ride != null) addAll(nearbyRows(BIKE, ride, approx)) else add(TileLine("$BIKE nic dziś", Emphasis.DIM))
-            when {
-                walk == null -> add(TileLine("$WALK pieszo nie zdążysz", Emphasis.DIM, LineSize.SMALL))
-                sameTrain -> add(TileLine("$WALK pieszo też zdążysz (zapas ${walk.slack.toMinutes()} min)", Emphasis.DIM, LineSize.SMALL))
-                else -> addAll(nearbyRows(WALK, walk, approx))
+            TileLayout.WIDE -> s.rows.map { r ->
+                val t = NameShortener.tiny(m.stationName(r.targetStationId), 6)
+                TileLine("$t: $BIKE ${wide(r.ride)} · $WALK ${wide(r.walk)}$approx", rowEmphasis(r))
+            }
+            TileLayout.COMPACT -> s.rows.map { r ->
+                val t = NameShortener.tiny(m.stationName(r.targetStationId), 4)
+                TileLine("$t $BIKE${compactTime(r.ride)} $WALK${compactTime(r.walk)}", rowEmphasis(r))
             }
         }
     }
 
-    private fun nearbyRows(mark: String, o: NearbyOption, approx: String): List<TileLine> {
+    private fun nearbyTall(mark: String, o: NearbyOption?): List<TileLine> {
+        if (o == null) return listOf(TileLine("$mark —", Emphasis.DIM))
         val t = o.train
-        val head = "$mark ${NameShortener.short(o.station.name, 13)} ${day(o)}${hm(t.departure)}→${hm(t.labelArrival)}$approx"
-        val details = listOfNotNull(
-            km(o.roadM),
-            "zapas ${o.slack.toMinutes()} min",
-            BUS.takeIf { t.isBus },
-            platformText(t),
-        ).joinToString(" · ")
-        return listOf(
-            TileLine(head, nearbyEmphasis(o), badge = "OSTATNI".takeIf { o.isLast }),
-            TileLine(details, Emphasis.DIM, LineSize.SMALL),
-        )
+        val text = "$mark ${NameShortener.short(o.station.name, 12)} ${day(o)}${hm(t.departure)}→${hm(t.labelArrival)} · ${km(o.roadM)}" +
+            (if (t.isBus) " $BUS" else "")
+        return listOf(TileLine(text, nearbyEmphasis(o), badge = "OSTATNI".takeIf { o.isLast }))
+    }
+
+    /** „Zgierz 17:42" / „—". */
+    private fun wide(o: NearbyOption?): String =
+        o?.let { "${NameShortener.tiny(it.station.name, 7)} ${day(it)}${hm(it.train.departure)}" } ?: "—"
+
+    private fun compactTime(o: NearbyOption?): String = o?.let { (if (it.tomorrow) "j" else "") + hm(it.train.departure) } ?: "—"
+
+    private fun rowEmphasis(r: NearbyRow) = when {
+        r.ride == null && r.walk == null -> Emphasis.DIM
+        listOfNotNull(r.ride, r.walk).any { it.tomorrow || it.isLast } -> Emphasis.WARN
+        else -> Emphasis.NORMAL
     }
 
     private fun day(o: NearbyOption) = if (o.tomorrow) "jutro " else ""

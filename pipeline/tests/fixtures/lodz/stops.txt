@@ -11,3 +11,5 @@ stop_id,stop_name,platform_code,stop_lat,stop_lon,location_type,parent_station
 1400_RAIL_1_1,Sieradz,1 t. 1,51.59600,18.73000,0,1400
 1500,Kraków Główny,,50.06800,19.94700,1,
 1500_RAIL_1_1,Kraków Główny,1 t. 1,50.06800,19.94700,0,1500
+1600,Łódź Fabryczna,,51.76900,19.46700,1,
+1600_RAIL_1_1,Łódź Fabryczna,1 t. 1,51.76900,19.46700,0,1600
