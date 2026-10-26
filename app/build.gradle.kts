@@ -22,13 +22,27 @@ android {
         buildConfigField("boolean", "NEARBY_MODE", "true")
     }
 
+    // Stały klucz release z sekretów CI (KEYSTORE_BASE64 → plik, KEYSTORE_PASSWORD, KEY_ALIAS).
+    // Bez niego (np. build lokalny) release podpisuje się kluczem debug — wtedy każda maszyna
+    // ma inny podpis i aktualizacja wymaga odinstalowania.
+    val releaseKeystore = System.getenv("KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Na własny użytek: podpis debug, dopóki faza 6 nie doda klucza release z sekretów CI.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

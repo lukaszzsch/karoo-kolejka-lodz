@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Stały podpis APK release (2026-10-26)
+
+- Release podpisywany kluczem z sekretów repo (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
+  `KEY_ALIAS`); aktualizacja przez `adb install -r` bez odinstalowywania. Bez sekretów — jak
+  dotąd klucz debug (z ostrzeżeniem w logu Actions).
+
 ### Wariant łódzki — trzy stacje docelowe, 6 opcji (2026-10-26)
 
 - Cele: Łódź Kaliska, Łódź Fabryczna, Łódź Widzew (`default_targets`); rozkład zawiera kursy

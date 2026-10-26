@@ -33,7 +33,22 @@ jobs:
       - name: Testy
         run: ./gradlew test
 
+      # Stały klucz podpisu release (sekrety repo). Bez sekretów build przechodzi z kluczem debug.
+      - name: Klucz podpisu
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Brak sekretu KEYSTORE_BASE64 — release podpisany kluczem debug (każdy build inny podpis)"
+          fi
+
       - name: Build
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: ./gradlew :app:assembleDebug :app:assembleRelease
 
       - uses: actions/upload-artifact@v4
