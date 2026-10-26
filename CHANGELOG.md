@@ -6,7 +6,7 @@
 
 - Osobna aplikacja „Pociąg do Łodzi" (`pl.kolejka.karoo.lodz`, rozszerzenie `pociag_lodz`,
   wersja 0.3.0-lodz): może stać na Karoo obok wersji warszawskiej. Rozkład z
-  `https://jach00lczyk.github.io/karoo-kolejka-lodz/manifest.json`.
+  `https://lukaszzsch.github.io/karoo-kolejka-lodz/manifest.json`.
 - Pipeline: `--region lodz|warszawa` (domyślnie `lodz`). Łódź: ŁKA + PolRegio (bez PKP
   Intercity — rower tylko z rezerwacją), cel Łódź Kaliska, bez WKD; tylko kursy z wysiadaniem
   na Kaliskiej, przycięte po niej. Nazwy przewoźników dopasowywane bez wielkości liter.

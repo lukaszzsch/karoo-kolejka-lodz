@@ -17,7 +17,7 @@ android {
         versionCode = 3
         versionName = "0.3.0-lodz"
         // Rozkład publikowany przez .github/workflows/timetable.yml na GitHub Pages (SPEC 1.2).
-        buildConfigField("String", "MANIFEST_URL", "\"https://jach00lczyk.github.io/karoo-kolejka-lodz/manifest.json\"")
+        buildConfigField("String", "MANIFEST_URL", "\"https://lukaszzsch.github.io/karoo-kolejka-lodz/manifest.json\"")
         // Tryb awaryjny (SPEC 6.10): kafelek liczy z bieżącej pozycji, trasa jest ignorowana.
         buildConfigField("boolean", "NEARBY_MODE", "true")
     }
