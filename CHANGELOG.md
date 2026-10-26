@@ -11,7 +11,7 @@
   Intercity — rower tylko z rezerwacją), cel Łódź Kaliska, bez WKD; tylko kursy z wysiadaniem
   na Kaliskiej, przycięte po niej. Nazwy przewoźników dopasowywane bez wielkości liter.
   Region warszawski bez zmian (dotychczasowe testy przechodzą z `--region warszawa`).
-- Domena: `NearbyPlanner` (SPEC 6.10) — stacje w 20 km od pozycji, warianty 🚲 15 km/h
+- Domena: `NearbyPlanner` (SPEC 6.10) — stacje w 20 km od pozycji, warianty 🚲 30 km/h
   i 🚶 5 km/h, najwcześniejszy przyjazd do celu, histereza 5 min, flagi OSTATNI / jutro,
   bez autobusów ZKA. Nowe stany `Nearby`, `NoPosition`, `NoStationNearby`; widoki w
   `TileText`. 9 testów.

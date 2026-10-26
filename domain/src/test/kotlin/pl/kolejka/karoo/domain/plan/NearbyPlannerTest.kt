@@ -63,7 +63,8 @@ class NearbyPlannerTest {
         now: Instant,
         trips: List<TripData> = baseTrips,
         position: LatLon? = pos,
-        settings: Settings = Settings(),
+        // Testy liczone dla 15 km/h niezależnie od domyślnej prędkości rowerem.
+        settings: Settings = Settings(emergencyRideKmh = 15.0),
         previous: TileState.Nearby? = null,
     ) = planner(now, trips).plan(position, settings, targets, data, previous)
 
@@ -111,7 +112,7 @@ class NearbyPlannerTest {
         val trips = listOf(trip(1, 1100, s(17, 30), s(17, 50), bus = true), trip(2, 1100, s(18, 30), s(18, 50)))
         val noBus = plan(at(17, 0), trips) as TileState.Nearby
         assertEquals(at(18, 30), noBus.ride!!.train.departure)
-        val withBus = plan(at(17, 0), trips, settings = Settings(allowBus = true)) as TileState.Nearby
+        val withBus = plan(at(17, 0), trips, settings = Settings(emergencyRideKmh = 15.0, allowBus = true)) as TileState.Nearby
         assertEquals(at(17, 30), withBus.ride!!.train.departure)
         assertTrue(withBus.ride!!.train.isBus)
     }

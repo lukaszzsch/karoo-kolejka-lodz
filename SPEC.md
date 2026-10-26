@@ -337,8 +337,7 @@ treningu: bez trasy i bez nawigacji, z bieżącej pozycji. `NearbyPlanner`:
 1. Stacje w promieniu `nearbyRadiusM` (20 km) od pozycji, najwyżej 8 najbliższych.
    Stacja celu ≤ 1 km → `AlreadyAtTarget`; brak stacji → `NoStationNearby(najbliższa)`.
 2. Dystans po drogach = linia prosta × `roadFactor` (1,3).
-3. Dwa warianty dojazdu: rowerem `emergencyRideKmh` (15 km/h — coś nie gra, jedziesz
-   ostrożnie) i pieszo z rowerem `walkKmh` (5 km/h). Gotowość = teraz + dojazd + `bufferMin`.
+3. Dwa warianty dojazdu: rowerem `emergencyRideKmh` (30 km/h) i pieszo z rowerem `walkKmh` (5 km/h). Gotowość = teraz + dojazd + `bufferMin`.
 4. Na każdej stacji pierwszy pociąg do celu odjeżdżający po gotowości (horyzont 20 h, czyli
    także „jutro rano"); autobusy ZKA pomijane (`allowBus = false` — z rowerem zwykle się nie da).
 5. Wygrywa najwcześniejszy przyjazd do celu, remis → bliższa stacja. Najbliższa stacja nie

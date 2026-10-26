@@ -85,8 +85,8 @@ data class Settings(
     // Tryb awaryjny „z pozycji" (SPEC 6.10): najbliższy pociąg do celu ze stacji w okolicy.
     /** Promień szukania stacji wokół bieżącej pozycji. */
     val nearbyRadiusM: Double = 20_000.0,
-    /** Prędkość dojazdu na stację rowerem w trybie awaryjnym (ostrożnie, coś nie gra). */
-    val emergencyRideKmh: Double = 15.0,
+    /** Prędkość dojazdu na stację rowerem w trybie awaryjnym. */
+    val emergencyRideKmh: Double = 30.0,
     /** Prędkość pieszo z rowerem (guma, łańcuch). */
     val walkKmh: Double = 5.0,
     /** Mnożnik odległości w linii prostej → po drogach. */
