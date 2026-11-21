@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "version": "20261121-4147a34d",
+  "sha256": "182c7cb5ef722705ff484f50b8e93cd0f5f4a32e020d99f888a408456d5c7e6b",
+  "size_bytes": 147666,
+  "url": "timetable-20261121-4147a34d.sqlite.gz",
+  "generated_at": "2026-11-21T08:31:33+00:00",
+  "valid_from": "2026-11-20",
+  "valid_to": "2026-12-05",
+  "sources": {
+    "https://mkuran.pl/gtfs/polish_trains.zip": {
+      "etag": "\"dmxyjkskac6p-ll1i3\"",
+      "last_modified": "Wed, 18 Nov 2026 01:49:26 GMT"
+    }
+  }
+}
